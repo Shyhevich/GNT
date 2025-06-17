@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>ОТС — Автоматична Модель</title>
+<style>
+  body {
+    background: #101010;
+    color: #eee;
+    font-family: 'Segoe UI', sans-serif;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 20px;
+  }
+  h1 {
+    margin-bottom: 10px;
+  }
+  #network {
+    width: 600px;
+    height: 600px;
+    background: #1a1a1a;
+    border-radius: 10px;
+    box-shadow: 0 0 15px #0b84f9aa;
+    margin-bottom: 15px;
+    position: relative;
+  }
+  svg {
+    width: 100%;
+    height: 100%;
+  }
+  .node circle {
+    cursor: pointer;
+    transition: fill 0.3s ease;
+    stroke: #0b84f9;
+    stroke-width: 3;
+  }
+  .node text {
+    fill: #ccc;
+    font-size: 14px;
+    user-select: none;
+    pointer-events: none;
+  }
+  .edge {
+    stroke: #444;
+    stroke-width: 2;
+  }
+  #controls {
+    margin-bottom: 10px;
+  }
+  button {
+    background: #0b84f9;
+    color: white;
+    border: none;
+    padding: 10px 20px;
+    font-size: 16px;
+    border-radius: 7px;
+    cursor: pointer;
+    margin: 0 5px;
+  }
+  button:hover {
+    background: #0664c8;
+  }
+  #stepCount {
+    margin-left: 15px;
+    font-weight: bold;
+    font-size: 18px;
+  }
+  #info {
+    max-width: 600px;
+    background: #222;
+    border-radius: 8px;
+    padding: 15px 20px;
+    font-size: 16px;
+    line-height: 1.4;
+    margin-top: 10px;
+  }
+</style>
+</head>
+<body>
+
+<h1>ОТС — Автоматична Модель Мережі</h1>
+<div id="network"><svg id="svgNetwork"></svg></div>
+
+<div id="controls">
+  <button id="startBtn">▶ Старт</button>
+  <button id="stopBtn">⏸ Стоп</button>
+  <button id="stepBtn">🔁 Один крок</button>
+  <span id="stepCount">Крок: 0</span>
+</div>
+
+<div id="info">
+  <strong>Що це:</strong>
+  <ul>
+    <li>Це модель динамічної мережі: кожен вузол має стан (0 або 1).</li>
+    <li>Стан вузла оновлюється на основі XOR з сусідами, якщо хоча б один із них активний.</li>
+    <li>Система може змінюватися вручну або автоматично — клікни на вузол або запусти симуляцію.</li>
+    <li>Натисни "Старт", щоб бачити еволюцію в дії.</li>
+  </ul>
+</div>
+
+<script>
+  const svg = document.getElementById('svgNetwork');
+  const stepBtn = document.getElementById('stepBtn');
+  const startBtn = document.getElementById('startBtn');
+  const stopBtn = document.getElementById('stopBtn');
+  const stepCountSpan = document.getElementById('stepCount');
+
+  const centerX = 300;
+  const centerY = 300;
+  const radius = 250;
+
+  let intervalId = null;
+  let stepCount = 0;
+
+  const nodes = [
+    { id: 1, state: 1 }, { id: 2, state: 0 }, { id: 3, state: 0 }, { id: 4, state: 0 },
+    { id: 5, state: 1 }, { id: 6, state: 0 }, { id: 7, state: 0 }, { id: 8, state: 1 },
+  ];
+
+  const edges = [
+    [1,2],[2,3],[3,4],[4,5],[5,6],[6,7],[7,8],[8,1],
+    [1,5],[2,6],[3,7],[4,8],
+  ];
+
+  function computePositions() {
+    const N = nodes.length;
+    nodes.forEach((node, i) => {
+      const angle = (2 * Math.PI / N) * i - Math.PI / 2;
+      node.x = centerX + radius * Math.cos(angle);
+      node.y = centerY + radius * Math.sin(angle);
+    });
+  }
+
+  function clearSVG() {
+    while (svg.firstChild) svg.removeChild(svg.firstChild);
+  }
+
+  function drawEdges() {
+    edges.forEach(([a, b]) => {
+      const nA = nodes.find(n => n.id === a);
+      const nB = nodes.find(n => n.id === b);
+      const line = document.createElementNS("http://www.w3.org/2000/svg", "line");
+      line.setAttribute("x1", nA.x);
+      line.setAttribute("y1", nA.y);
+      line.setAttribute("x2", nB.x);
+      line.setAttribute("y2", nB.y);
+      line.setAttribute("class", "edge");
+      svg.appendChild(line);
+    });
+  }
+
+  function drawNodes() {
+    nodes.forEach(node => {
+      const g = document.createElementNS("http://www.w3.org/2000/svg", "g");
+      g.setAttribute("class", "node");
+      g.setAttribute("transform", `translate(${node.x},${node.y})`);
+
+      const circle = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+      circle.setAttribute("r", 22);
+      circle.setAttribute("fill", node.state ? "#0f0" : "#444");
+
+      const text = document.createElementNS("http://www.w3.org/2000/svg", "text");
+      text.setAttribute("x", 0);
+      text.setAttribute("y", 7);
+      text.setAttribute("text-anchor", "middle");
+      text.textContent = node.id;
+
+      g.appendChild(circle);
+      g.appendChild(text);
+      svg.appendChild(g);
+
+      g.addEventListener('click', () => {
+        node.state = node.state ? 0 : 1;
+        drawNetwork();
+      });
+    });
+  }
+
+  function xor(a, b) {
+    return a ^ b;
+  }
+
+  function simulationStep() {
+    const newStates = nodes.map(node => {
+      const neighbors = edges.filter(e => e.includes(node.id)).map(e => (e[0] === node.id ? e[1] : e[0]));
+      const sum = neighbors.reduce((acc, nid) => acc + nodes.find(n => n.id === nid).state, 0);
+      if (sum === 0) return node.state;
+      return xor(node.state, sum % 2);
+    });
+
+    nodes.forEach((node, i) => node.state = newStates[i]);
+    stepCount++;
+    stepCountSpan.textContent = `Крок: ${stepCount}`;
+    drawNetwork();
+  }
+
+  function drawNetwork() {
+    clearSVG();
+    drawEdges();
+    drawNodes();
+  }
+
+  function startSimulation() {
+    if (!intervalId) intervalId = setInterval(simulationStep, 800);
+  }
+
+  function stopSimulation() {
+    if (intervalId) {
+      clearInterval(intervalId);
+      intervalId = null;
+    }
+  }
+
+  computePositions();
+  drawNetwork();
+
+  stepBtn.onclick = simulationStep;
+  startBtn.onclick = startSimulation;
+  stopBtn.onclick = stopSimulation;
+</script>
+
+</body>
+</html>
