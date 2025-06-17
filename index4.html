@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>ОТС — Презентація Теорії</title>
+  <style>
+    body {
+      background: #0b0b0b;
+      color: #eee;
+      font-family: 'Segoe UI', sans-serif;
+      margin: 0;
+      padding: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+    header {
+      background: #111;
+      padding: 20px;
+      width: 100%;
+      text-align: center;
+      box-shadow: 0 2px 5px #000;
+    }
+    h1 {
+      margin: 0;
+      color: #00ccff;
+    }
+    main {
+      max-width: 800px;
+      padding: 20px;
+    }
+    #network {
+      width: 600px;
+      height: 600px;
+      background: #1a1a1a;
+      border-radius: 10px;
+      box-shadow: 0 0 15px #00ccffaa;
+      margin: 20px auto;
+    }
+    svg {
+      width: 100%;
+      height: 100%;
+    }
+    .node circle {
+      cursor: pointer;
+      transition: fill 0.3s ease;
+      stroke: #00ccff;
+      stroke-width: 3;
+    }
+    .node text {
+      fill: #ccc;
+      font-size: 14px;
+      user-select: none;
+      pointer-events: none;
+    }
+    .edge {
+      stroke: #444;
+      stroke-width: 2;
+    }
+    #controls {
+      text-align: center;
+      margin: 10px;
+    }
+    button {
+      background: #00ccff;
+      color: black;
+      border: none;
+      padding: 10px 20px;
+      font-size: 16px;
+      border-radius: 6px;
+      margin: 5px;
+      cursor: pointer;
+    }
+    button:hover {
+      background: #00aacc;
+    }
+    #stepCount {
+      font-size: 18px;
+      margin-left: 10px;
+    }
+    section {
+      margin-top: 20px;
+      background: #111;
+      padding: 15px 20px;
+      border-radius: 10px;
+      box-shadow: 0 0 10px #000;
+    }
+    code {
+      background: #222;
+      padding: 2px 6px;
+      border-radius: 5px;
+      color: #0f0;
+    }
+    #log {
+      font-family: monospace;
+      font-size: 13px;
+      max-height: 200px;
+      overflow-y: auto;
+      background: #000;
+      color: #0f0;
+      padding: 10px;
+      margin-top: 10px;
+      border-radius: 6px;
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <h1>ОТС — Загальна Теорія Систем (∞)</h1>
+  <p>Жива симуляція мережевої взаємодії. Інтерфейс до складної динаміки.</p>
+</header>
+
+<main>
+
+  <div id="network"><svg id="svgNetwork"></svg></div>
+
+  <div id="controls">
+    <button id="startBtn">▶ Старт</button>
+    <button id="stopBtn">⏸ Стоп</button>
+    <button id="stepBtn">🔁 Крок</button>
+    <span id="stepCount">Крок: 0</span>
+  </div>
+
+  <section>
+    <h2>Що ви бачите?</h2>
+    <p>
+      Це симуляція мережі з 8 вузлів. Кожен має стан: <code>0</code> (неактивний) або <code>1</code> (активний).
+      Вузли змінюють свій стан залежно від сусідів за правилом:
+    </p>
+    <p style="text-align:center;">
+      <code>Sᵢ(t+1) = Sᵢ(t) ⊕ parity(сусідів)</code>
+    </p>
+    <p>
+      Так виникає жива, нескінченна динаміка. Один вузол — вічна "іскра". Інші можуть активуватись випадково.
+    </p>
+  </section>
+
+  <section>
+    <h2>Що це демонструє?</h2>
+    <ul>
+      <li>Як проста формула керує складною системою.</li>
+      <li>Що мережа може жити, адаптуватись, змінюватись без центрального керування.</li>
+      <li>Це основа Загальної Теорії Систем: <b>S, ⊕, f, g, p</b></li>
+    </ul>
+  </section>
+
+  <section>
+    <h2>Лог станів (історія)</h2>
+    <div id="log"></div>
+  </section>
+
+</main>
+
+<script>
+const svg = document.getElementById('svgNetwork');
+const stepBtn = document.getElementById('stepBtn');
+const startBtn = document.getElementById('startBtn');
+const stopBtn = document.getElementById('stopBtn');
+const stepCountSpan = document.getElementById('stepCount');
+const logBox = document.getElementById('log');
+
+const centerX = 300, centerY = 300, radius = 250;
+let intervalId = null, stepCount = 0;
+
+const nodes = [
+  { id: 1, state: 1 }, { id: 2, state: 0 }, { id: 3, state: 0 }, { id: 4, state: 0 },
+  { id: 5, state: 1 }, { id: 6, state: 0 }, { id: 7, state: 0 }, { id: 8, state: 1 },
+];
+
+const edges = [
+  [1,2],[2,3],[3,4],[4,5],[5,6],[6,7],[7,8],[8,1],
+  [1,5],[2,6],[3,7],[4,8],
+];
+
+function computePositions() {
+  const N = nodes.length;
+  nodes.forEach((node, i) => {
+    const angle = (2 * Math.PI / N) * i - Math.PI / 2;
+    node.x = centerX + radius * Math.cos(angle);
+    node.y = centerY + radius * Math.sin(angle);
+  });
+}
+
+function clearSVG() {
+  while (svg.firstChild) svg.removeChild(svg.firstChild);
+}
+
+function drawEdges() {
+  edges.forEach(([a, b]) => {
+    const nA = nodes.find(n => n.id === a);
+    const nB = nodes.find(n => n.id === b);
+    const line = document.createElementNS("http://www.w3.org/2000/svg", "line");
+    line.setAttribute("x1", nA.x);
+    line.setAttribute("y1", nA.y);
+    line.setAttribute("x2", nB.x);
+    line.setAttribute("y2", nB.y);
+    line.setAttribute("class", "edge");
+    svg.appendChild(line);
+  });
+}
+
+function drawNodes() {
+  nodes.forEach(node => {
+    const g = document.createElementNS("http://www.w3.org/2000/svg", "g");
+    g.setAttribute("class", "node");
+    g.setAttribute("transform", `translate(${node.x},${node.y})`);
+
+    const circle = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+    circle.setAttribute("r", 22);
+    circle.setAttribute("fill", node.state ? "#0f0" : "#444");
+
+    const text = document.createElementNS("http://www.w3.org/2000/svg", "text");
+    text.setAttribute("x", 0);
+    text.setAttribute("y", 7);
+    text.setAttribute("text-anchor", "middle");
+    text.textContent = node.id;
+
+    g.appendChild(circle);
+    g.appendChild(text);
+    svg.appendChild(g);
+
+    g.addEventListener('click', () => {
+      node.state = node.state ? 0 : 1;
+      drawNetwork();
+    });
+  });
+}
+
+function xor(a, b) {
+  return a ^ b;
+}
+
+function simulationStep() {
+  const newStates = nodes.map((node, index) => {
+    const neighbors = edges
+      .filter(e => e.includes(node.id))
+      .map(e => e[0] === node.id ? e[1] : e[0]);
+
+    const sum = neighbors.reduce((acc, nid) => acc + nodes.find(n => n.id === nid).state, 0);
+    return xor(node.state, sum % 2); // f(g(сусідів)) = XOR(state, parity)
+  });
+
+  // Іскра
+  newStates[0] = 1;
+
+  // Шум (20% випадкове збудження)
+  for (let i = 1; i < nodes.length; i++) {
+    if (Math.random() < 0.2) newStates[i] = 1;
+  }
+
+  nodes.forEach((node, i) => node.state = newStates[i]);
+
+  stepCount++;
+  stepCountSpan.textContent = `Крок: ${stepCount}`;
+  drawNetwork();
+  logBox.innerHTML += `S(${stepCount}) = [${nodes.map(n => n.state).join(', ')}]<br>`;
+  logBox.scrollTop = logBox.scrollHeight;
+}
+
+function drawNetwork() {
+  clearSVG();
+  drawEdges();
+  drawNodes();
+}
+
+function startSimulation() {
+  if (!intervalId) intervalId = setInterval(simulationStep, 800);
+}
+
+function stopSimulation() {
+  if (intervalId) {
+    clearInterval(intervalId);
+    intervalId = null;
+  }
+}
+
+computePositions();
+drawNetwork();
+
+stepBtn.onclick = simulationStep;
+startBtn.onclick = startSimulation;
+stopBtn.onclick = stopSimulation;
+</script>
+
+</body>
+</html>
