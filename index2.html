@@ -1,86 +1,86 @@
 <!DOCTYPE html>
 <html lang="uk">
 <head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>ОТС — Автоматична Модель</title>
-<style>
-  body {
-    background: #101010;
-    color: #eee;
-    font-family: 'Segoe UI', sans-serif;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    padding: 20px;
-  }
-  h1 {
-    margin-bottom: 10px;
-  }
-  #network {
-    width: 600px;
-    height: 600px;
-    background: #1a1a1a;
-    border-radius: 10px;
-    box-shadow: 0 0 15px #0b84f9aa;
-    margin-bottom: 15px;
-    position: relative;
-  }
-  svg {
-    width: 100%;
-    height: 100%;
-  }
-  .node circle {
-    cursor: pointer;
-    transition: fill 0.3s ease;
-    stroke: #0b84f9;
-    stroke-width: 3;
-  }
-  .node text {
-    fill: #ccc;
-    font-size: 14px;
-    user-select: none;
-    pointer-events: none;
-  }
-  .edge {
-    stroke: #444;
-    stroke-width: 2;
-  }
-  #controls {
-    margin-bottom: 10px;
-  }
-  button {
-    background: #0b84f9;
-    color: white;
-    border: none;
-    padding: 10px 20px;
-    font-size: 16px;
-    border-radius: 7px;
-    cursor: pointer;
-    margin: 0 5px;
-  }
-  button:hover {
-    background: #0664c8;
-  }
-  #stepCount {
-    margin-left: 15px;
-    font-weight: bold;
-    font-size: 18px;
-  }
-  #info {
-    max-width: 600px;
-    background: #222;
-    border-radius: 8px;
-    padding: 15px 20px;
-    font-size: 16px;
-    line-height: 1.4;
-    margin-top: 10px;
-  }
-</style>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>ОТС — Жива Мережа</title>
+  <style>
+    body {
+      background: #101010;
+      color: #eee;
+      font-family: Arial, sans-serif;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 20px;
+    }
+    h1 {
+      margin-bottom: 10px;
+    }
+    #network {
+      width: 600px;
+      height: 600px;
+      background: #1a1a1a;
+      border-radius: 10px;
+      box-shadow: 0 0 15px #0b84f9aa;
+      margin-bottom: 15px;
+    }
+    svg {
+      width: 100%;
+      height: 100%;
+    }
+    .node circle {
+      cursor: pointer;
+      transition: fill 0.3s ease;
+      stroke: #0b84f9;
+      stroke-width: 3;
+    }
+    .node text {
+      fill: #ccc;
+      font-size: 14px;
+      user-select: none;
+      pointer-events: none;
+    }
+    .edge {
+      stroke: #444;
+      stroke-width: 2;
+    }
+    #controls {
+      margin-bottom: 10px;
+    }
+    button {
+      background: #0b84f9;
+      color: white;
+      border: none;
+      padding: 10px 20px;
+      font-size: 16px;
+      border-radius: 7px;
+      cursor: pointer;
+      margin: 0 5px;
+    }
+    button:hover {
+      background: #0664c8;
+    }
+    #stepCount {
+      margin-left: 15px;
+      font-weight: bold;
+      font-size: 18px;
+    }
+    #info {
+      max-width: 600px;
+      background: #222;
+      border-radius: 8px;
+      padding: 15px 20px;
+      font-size: 16px;
+      line-height: 1.4;
+      margin-top: 10px;
+    }
+  </style>
 </head>
 <body>
 
-<h1>ОТС — Автоматична Модель Мережі</h1>
+<h1>ОТС — Жива Мережа</h1>
+
 <div id="network"><svg id="svgNetwork"></svg></div>
 
 <div id="controls">
@@ -91,12 +91,12 @@
 </div>
 
 <div id="info">
-  <strong>Що це:</strong>
+  <strong>Що це?</strong>
   <ul>
-    <li>Це модель динамічної мережі: кожен вузол має стан (0 або 1).</li>
-    <li>Стан вузла оновлюється на основі XOR з сусідами, якщо хоча б один із них активний.</li>
-    <li>Система може змінюватися вручну або автоматично — клікни на вузол або запусти симуляцію.</li>
-    <li>Натисни "Старт", щоб бачити еволюцію в дії.</li>
+    <li>Це модель живої мережі, де кожна точка (вузол) має стан: 0 (сірий) або 1 (зелений).</li>
+    <li>Вузол змінює стан залежно від сусідів (через операцію XOR).</li>
+    <li>Один вузол завжди ввімкнений (іскра), інші можуть активуватись випадково.</li>
+    <li>Так ми бачимо нескінченну динаміку — життя мережі.</li>
   </ul>
 </div>
 
@@ -115,13 +115,19 @@
   let stepCount = 0;
 
   const nodes = [
-    { id: 1, state: 1 }, { id: 2, state: 0 }, { id: 3, state: 0 }, { id: 4, state: 0 },
-    { id: 5, state: 1 }, { id: 6, state: 0 }, { id: 7, state: 0 }, { id: 8, state: 1 },
+    { id: 1, state: 1 },
+    { id: 2, state: 0 },
+    { id: 3, state: 0 },
+    { id: 4, state: 0 },
+    { id: 5, state: 1 },
+    { id: 6, state: 0 },
+    { id: 7, state: 0 },
+    { id: 8, state: 1 },
   ];
 
   const edges = [
     [1,2],[2,3],[3,4],[4,5],[5,6],[6,7],[7,8],[8,1],
-    [1,5],[2,6],[3,7],[4,8],
+    [1,5],[2,6],[3,7],[4,8]
   ];
 
   function computePositions() {
@@ -186,9 +192,17 @@
     const newStates = nodes.map(node => {
       const neighbors = edges.filter(e => e.includes(node.id)).map(e => (e[0] === node.id ? e[1] : e[0]));
       const sum = neighbors.reduce((acc, nid) => acc + nodes.find(n => n.id === nid).state, 0);
-      if (sum === 0) return node.state;
-      return xor(node.state, sum % 2);
+      if (sum === 0) return node.state; // залишити, якщо сусіди мертві
+      return xor(node.state, sum % 2);  // xor з парністю сусідів
     });
+
+    // постійна іскра: перший вузол завжди активний
+    newStates[0] = 1;
+
+    // випадкове збудження: 20% шанс увімкнути вузол
+    for (let i = 1; i < nodes.length; i++) {
+      if (Math.random() < 0.2) newStates[i] = 1;
+    }
 
     nodes.forEach((node, i) => node.state = newStates[i]);
     stepCount++;
